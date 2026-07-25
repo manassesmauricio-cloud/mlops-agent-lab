@@ -1,0 +1,10 @@
+{
+  "date": "2026-07-25",
+  "model_version": "churn_v11",
+  "psi": 0.29,
+  "auc": 0.815,
+  "auc_previous": 0.87,
+  "latency": 144,
+  "error_rate": 0.0187,
+  "samples": 15221
+}

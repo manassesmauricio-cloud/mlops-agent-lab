@@ -1,0 +1,119 @@
+version: '3.8'
+
+# ─── Variables comunes de Airflow ────────────────────────────────────────────
+x-airflow-common:
+  &airflow-common
+  build: .
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: 'FB0o_zt4e3Ziq3LdUUO7F2Z95cvFFx16hU8jTeR1ASM='
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    # MLflow
+    MLFLOW_TRACKING_URI: http://mlflow:5000
+    # Anthropic (para el agente)
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    # Python path para importar módulos del proyecto
+    PYTHONPATH: /opt/airflow
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./scripts:/opt/airflow/scripts
+    - ./monitoring:/opt/airflow/monitoring
+    - ./registry:/opt/airflow/registry
+    - ./models:/opt/airflow/models
+    - ./mlruns:/opt/airflow/mlruns
+    - ./agent:/opt/airflow/agent
+    - ./policies:/opt/airflow/policies
+    - airflow-logs:/opt/airflow/logs
+  depends_on:
+    &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+# ─── Servicios ────────────────────────────────────────────────────────────────
+services:
+
+  # PostgreSQL — backend de Airflow
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # MLflow Tracking Server
+  mlflow:
+    build: .
+    command: >
+      mlflow server
+        --backend-store-uri sqlite:////mlruns/mlflow.db
+        --default-artifact-root /mlruns/artifacts
+        --host 0.0.0.0
+        --port 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # Airflow Webserver — UI en http://localhost:8080
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Airflow Scheduler — ejecuta los DAGs
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Inicialización de Airflow (se ejecuta una sola vez)
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+      _AIRFLOW_WWW_USER_FIRSTNAME: MLOps
+      _AIRFLOW_WWW_USER_LASTNAME: Agent
+      _AIRFLOW_WWW_USER_EMAIL: admin@mlops.local
+      _AIRFLOW_WWW_USER_ROLE: Admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-db-volume:
+  airflow-logs:

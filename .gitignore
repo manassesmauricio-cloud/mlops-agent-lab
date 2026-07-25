@@ -1,0 +1,33 @@
+# Entorno
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.Python
+env/
+venv/
+.venv/
+
+# MLflow
+mlruns/
+*.db
+*.sqlite
+
+# Logs y reportes generados
+logs/reports/
+logs/agent_log.csv
+
+# Modelos entrenados localmente
+models/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

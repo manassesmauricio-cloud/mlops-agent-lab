@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════
+#  Políticas de Gobernanza del Agente MLOps
+#  Human in the Loop — Restricciones de Operación
+# ═══════════════════════════════════════════════════════
+
+approval:
+  # Si es false, el agente NO puede desplegar automáticamente.
+  # Genera una solicitud de aprobación manual.
+  auto_deploy: false
+
+  # Mejora mínima de AUC para que un nuevo modelo sea promovido.
+  # Si el nuevo modelo mejora menos de esto, se descarta.
+  min_auc_improvement: 0.02
+
+  # Costo máximo estimado de entrenamiento (en unidades arbitrarias).
+  # Se calcula como: samples / 1000
+  max_cost_training: 30
+
+  # Si es false, el agente no puede iniciar entrenamiento en sábado o domingo.
+  allow_weekend_training: false
+
+
+# ═══════════════════════════════════════════════════════
+#  Umbrales de Evaluación
+# ═══════════════════════════════════════════════════════
+
+thresholds:
+  psi:
+    ok: 0.10       # Sin drift significativo
+    warning: 0.20  # Drift moderado
+    # >= warning → CRITICAL
+
+  auc_drop:
+    ok: 0.02       # Caída aceptable (< 2%)
+    critical: 0.05 # Caída crítica (>= 5%)
+    # Entre ok y critical → WARNING
+
+  latency_ms:
+    ok: 100        # Latencia aceptable
+    warning: 200   # Latencia elevada
+    # >= warning → CRITICAL
+
+  error_rate:
+    ok: 0.01       # < 1% errores
+    warning: 0.03  # < 3% errores
+    # >= warning → CRITICAL
+
+
+# ═══════════════════════════════════════════════════════
+#  Configuración de Notificaciones
+# ═══════════════════════════════════════════════════════
+
+notifications:
+  email: mlops-team@empresa.com
+  slack_channel: "#mlops-alerts"
+  alert_on: [WARNING, CRITICAL]

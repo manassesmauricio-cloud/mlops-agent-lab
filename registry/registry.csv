@@ -1,0 +1,5 @@
+fecha,model_version,run_id,auc,f1,recall,estado
+2026-05-01,churn_v8,run_abc123,0.91,0.87,0.83,historico
+2026-05-15,churn_v9,run_def456,0.90,0.86,0.82,historico
+2026-06-01,churn_v10,run_ghi789,0.89,0.85,0.81,historico
+2026-06-20,churn_v11,run_jkl012,0.87,0.83,0.79,produccion
